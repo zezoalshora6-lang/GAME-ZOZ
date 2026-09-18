@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحدي الروم الجماعي | مزامنة فورية آمنة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- مكتبات Firebase السحابية -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #05050a;
+            --bg-card: #12121f;
+            --primary-neon: #00f0ff;
+            --secondary-neon: #7000ff;
+            --accent-pink: #ff0055;
+            --text-main: #ffffff;
+            --text-sub: #a1a1aa;
+            --success-green: #22c55e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Cairo', sans-serif; }
+
+        body {
+            background: var(--bg-deep);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(112, 0, 255, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 240, 255, 0.15) 0%, transparent 40%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            max-width: 450px;
+            height: 100vh;
+            max-height: 880px;
+            background: rgba(18, 18, 31, 0.92);
+            backdrop-filter: blur(20px);
+            flex-direction: column;
+            padding: 24px;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+            border-radius: 28px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            justify-content: space-between;
+            text-align: center;
+        }
+
+        .screen.active { display: flex; }
+
+        h1 { font-size: 2.2rem; font-weight: 900; margin-bottom: 10px; }
+        h1 .highlight { color: var(--primary-neon); text-shadow: 0 0 15px rgba(0, 240, 255, 0.5); }
+        p { color: var(--text-sub); font-size: 0.95rem; margin-bottom: 20px; }
+
+        .input-box {
+            width: 100%;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-bottom: 15px;
+            outline: none;
+            transition: 0.2s;
+        }
+        .input-box:focus { border-color: var(--primary-neon); box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--primary-neon), var(--secondary-neon));
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(0, 240, 255, 0.35);
+            margin-top: 10px;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(0, 240, 255, 0.6); }
+        .secondary-btn { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
+
+        .players-list {
+            background: rgba(0,0,0,0.3);
+            border-radius: 14px;
+            padding: 15px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.05);
+            text-align: right;
+        }
+        .player-item {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.03);
+            margin-bottom: 8px;
+            border-radius: 8px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .room-code-badge {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px dashed var(--primary-neon);
+            color: var(--primary-neon);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. شاشة البداية -->
+    <div id="home-screen" class="screen active" style="justify-content: center;">
+        <div>
+            <h1>تحدي <span class="highlight">الروم الجماعي</span></h1>
+            <p>مزامنة فائقة الدقة بالمللي ثانية عبر السيرفر!</p>
+        </div>
+        <div>
+            <input type="text" id="player-name-input" class="input-box" placeholder="اكتب اسمك المستعار..." maxlength="15">
+            <button class="btn" onclick="createRoom()"><i class="fa-solid fa-plus"></i> إنشاء روم جديدة</button>
+            <button class="btn secondary-btn" onclick="showJoinScreen()"><i class="fa-solid fa-right-to-bracket"></i> انضمام لروم</button>
+        </div>
+    </div>
+
+    <!-- شاشة الانضمام -->
+    <div id="join-screen" class="screen" style="justify-content: center;">
+        <div>
+            <h2>الانضمام لغرفة أصحابك</h2>
+            <p>اكتب كود الروم (4 أرقام):</p>
+            <input type="number" id="room-code-input" class="input-box" placeholder="مثال: 4321">
+            <button class="btn" onclick="joinRoom()">دخول الغرفة</button>
+            <button class="btn secondary-btn" onclick="showScreen('home-screen')">رجوع</button>
+        </div>
+    </div>
+
+    <!-- 2. لوبي الانتظار (Lobby) -->
+    <div id="lobby-screen" class="screen">
+        <div>
+            <h2>غرفة الانتظار</h2>
+            <p>كود الروم الخاص بكم:</p>
+            <div class="room-code-badge" id="display-room-code">----</div>
+        </div>
+        
+        <div class="players-list" id="lobby-players-list"></div>
+
+        <div>
+            <button id="start-game-btn" class="btn" style="display:none;" onclick="hostStartGame()">ابدأ التحدي الآن!</button>
+            <p id="waiting-host-text" style="color:var(--accent-pink); font-weight:700;">في انتظار صاحب الغرفة ليبدأ اللعبة...</p>
+        </div>
+    </div>
+
+    <!-- 3. شاشة السؤال واللعب -->
+    <div id="game-screen" class="screen">
+        <div>
+            <h3 id="question-title" style="color:var(--primary-neon); margin-bottom:15px; font-size:1.3rem;">جاري تحميل السؤال...</h3>
+        </div>
+
+        <div id="answer-area">
+            <input type="number" id="player-answer-input" class="input-box" placeholder="اكتب إجابتك السريعة...">
+            <button class="btn" onclick="submitAnswer()">إرسال الإجابة فوراً</button>
+        </div>
+
+        <div id="waiting-answers-msg" style="display:none; color:var(--accent-pink); font-weight:800; font-size:1.1rem;">
+            تم إرسال إجابتك للسيرفر بدقة! في انتظار باقي اللاعبين...
+        </div>
+    </div>
+
+    <!-- 4. شاشة النتائج والترتيب -->
+    <div id="score-screen" class="screen">
+        <h2>نتائج التزامن والترتيب</h2>
+        <div class="players-list" id="score-players-list"></div>
+        <button class="btn" id="next-round-btn" style="display:none;" onclick="hostStartGame()">السؤال التالي</button>
+        <p id="waiting-next-text" style="color:var(--text-sub);">انتظر صاحب الغرفة...</p>
+    </div>
+
+    <script>
+        // ضع هنا بيانات الـ Firebase الخاصة بك 👇
+        const firebaseConfig = {
+            databaseURL: "https://YOUR-DATABASE-NAME.firebaseio.com" 
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let myName = "";
+        let currentRoomCode = "";
+        let isHost = false;
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showJoinScreen() {
+            myName = document.getElementById('player-name-input').value.trim();
+            if(!myName) { alert("من فضلك اكتب اسمك الأول!"); return; }
+            showScreen('join-screen');
+        }
+
+        function createRoom() {
+            myName = document.getElementById('player-name-input').value.trim();
+            if(!myName) { alert("من فضلك اكتب اسمك الأول!"); return; }
+
+            currentRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
+            isHost = true;
+
+            db.ref('rooms/' + currentRoomCode).set({
+                host: myName,
+                status: 'waiting',
+                question: 'كم عدد ألوان الطيف؟',
+                correctAnswer: 7
+            }).then(() => {
+                document.getElementById('display-room-code').innerText = currentRoomCode;
+                document.getElementById('start-game-btn').style.display = 'flex';
+                document.getElementById('waiting-host-text').style.display = 'none';
+                
+                joinFirebaseRoom();
+                showScreen('lobby-screen');
+            });
+        }
+
+        function joinRoom() {
+            let code = document.getElementById('room-code-input').value.trim();
+            if(!code) { alert("اكتب كود الروم!"); return; }
+
+            db.ref('rooms/' + code).once('value', (snapshot) => {
+                if(snapshot.exists()) {
+                    currentRoomCode = code;
+                    isHost = false;
+                    document.getElementById('display-room-code').innerText = currentRoomCode;
+                    joinFirebaseRoom();
+                    showScreen('lobby-screen');
+                } else {
+                    alert("هذه الغرفة غير موجودة أو انتهت!");
+                }
+            });
+        }
+
+        function joinFirebaseRoom() {
+            let playerRef = db.ref('rooms/' + currentRoomCode + '/players/' + myName);
+            playerRef.set({ name: myName, score: 0, answered: false });
+            playerRef.onDisconnect().remove();
+
+            // الاستماع للاعبين المتواجدين وتحديث النقاط
+            db.ref('rooms/' + currentRoomCode + '/players').on('value', (snapshot) => {
+                let listEl = document.getElementById('lobby-players-list');
+                let scoreListEl = document.getElementById('score-players-list');
+                listEl.innerHTML = '';
+                scoreListEl.innerHTML = '';
+
+                snapshot.forEach((child) => {
+                    let p = child.val();
+                    listEl.innerHTML += `<div class="player-item"><span>${p.name}</span> <i class="fa-solid fa-check" style="color:var(--success-green)"></i></div>`;
+                    scoreListEl.innerHTML += `<div class="player-item"><span>${p.name}</span> <b>${p.score || 0} نقطة</b></div>`;
+                });
+            });
+
+            // الاستماع لتغييرات حالة الروم
+            db.ref('rooms/' + currentRoomCode + '/status').on('value', (snapshot) => {
+                let status = snapshot.val();
+                if(status === 'playing') {
+                    document.getElementById('player-answer-input').value = '';
+                    document.getElementById('answer-area').style.display = 'block';
+                    document.getElementById('waiting-answers-msg').style.display = 'none';
+                    showScreen('game-screen');
+                } else if(status === 'scored') {
+                    showScreen('score-screen');
+                    if(isHost) document.getElementById('next-round-btn').style.display = 'flex';
+                }
+            });
+        }
+
+        function hostStartGame() {
+            if(!isHost) return;
+            // إعادة ضبط حالة اللاعبين للبداية الجديدة
+            let playersRef = db.ref('rooms/' + currentRoomCode + '/players');
+            playersRef.once('value', (snap) => {
+                let updates = {};
+                snap.forEach(child => {
+                    updates[child.key + '/answered'] = false;
+                    updates[child.key + '/answer'] = null;
+                    updates[child.key + '/timestamp'] = null;
+                });
+                playersRef.update(updates);
+            });
+
+            db.ref('rooms/' + currentRoomCode).update({
+                status: 'playing',
+                question: 'خمن رقماً بين 1 و 10:',
+                correctAnswer: Math.floor(Math.random() * 10) + 1
+            });
+        }
+
+        // إرسال الإجابة مع الختم الزمني للسيرفر (Server Timestamp) لمنع أي تضارب
+        function submitAnswer() {
+            let val = document.getElementById('player-answer-input').value;
+            if(val === '') { alert("من فضلك اكتب إجابتك!"); return; }
+
+            document.getElementById('answer-area').style.display = 'none';
+            document.getElementById('waiting-answers-msg').style.display = 'block';
+
+            // استخدام Server.database.ServerValue.TIMESTAMP لضمان توقيت السيرفر الحقيقي بالمللي ثانية
+            let myAnswerRef = db.ref('rooms/' + currentRoomCode + '/players/' + myName);
+            
+            myAnswerRef.update({
+                answer: Number(val),
+                answered: true,
+                timestamp: firebase.database.ServerValue.TIMESTAMP // الختم الزمني الحقيقي للسيرفر
+            }).then(() => {
+                // الفحص الآني: هل كل اللاعبين أجابوا؟
+                if(isHost) {
+                    checkAllPlayersAnswered();
+                }
+            });
+        }
+
+        // التحقق من أن الجميع أجاب وحساب النقاط بدقة متناهية
+        function checkAllPlayersAnswered() {
+            db.ref('rooms/' + currentRoomCode).once('value', (snapshot) => {
+                let roomData = snapshot.val();
+                let players = roomData.players;
+                let correctAnswer = roomData.correctAnswer;
+
+                let allDone = true;
+                let answersArray = [];
+
+                for(let pName in players) {
+                    if(!players[pName].answered) {
+                        allDone = false;
+                    } else {
+                        answersArray.push({
+                            name: pName,
+                            ans: players[pName].answer,
+                            time: players[pName].timestamp || Date.now()
+                        });
+                    }
+                }
+
+                // لو الكل خلص، السيرفر بيحسب مين الأقرب أو الأسرع بتزامن مطلق
+                if(allDone) {
+                    // فرز الإجابات حسب الأقرب للإجابة الصحيحة، ولو تساوت الإجابة الأسرع بالمللي ثانية يكسب
+                    answersArray.sort((a, b) => {
+                        let diffA = Math.abs(a.ans - correctAnswer);
+                        let diffB = Math.abs(b.ans - correctAnswer);
+                        if(diffA !== diffB) return diffA - diffB; // الأقرب صحياً أولاً
+                        return a.time - b.time; // لو تساوت الإجابة، الأسرع زمناً يكسب
+                    });
+
+                    let updates = {};
+                    // منح النقاط للفائز الأول في هذه الجولة بدقة السيرفر
+                    if(answersArray.length > 0) {
+                        let winnerName = answersArray[0].name;
+                        let currentScore = players[winnerName].score || 0;
+                        updates['players/' + winnerName + '/score'] = currentScore + 10;
+                    }
+
+                    updates['status'] = 'scored';
+                    db.ref('rooms/' + currentRoomCode).update(updates);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
